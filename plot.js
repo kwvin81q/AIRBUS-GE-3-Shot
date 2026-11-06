@@ -12,25 +12,39 @@ return {ri,r,residual,angle,centers,rads,x,y};
 if (typeof document !== 'undefined') {
   const $ = id => document.getElementById(id);
   const fields = ['u0', 'u1', 'u2', 'u3'];
-  const labels = ['U₀ Baseline', 'U₁ Shot 1', 'U₂ Shot 2', 'U₃ Shot 3'];
+  const labels = ['U₀ Baseline', 'U₁ Shot A', 'U₂ Shot B', 'U₃ Shot C'];
   const colors = ['#65d1fb', '#ffd06c', '#cfadff'];
   const prompt = '<p class="hint">Enter the readings to draw the baseline and three trial arcs.</p>';
   $('readings').innerHTML = fields.map((id, i) => `
-    <div><label for="${id}">${labels[i]} (mils)</label>
+    <div><label for="${id}">${labels[i]} (units)</label>
     <input id="${id}" type="number" step="any" min="${i ? 0 : 0.01}" inputmode="decimal" required></div>
   `).join('');
 
-  const hole = n => ((n - 1 + 76) % 38) + 1;
-
-  function updatePositions() {
-    const center = $('center').valueAsNumber;
-    $('positions').textContent = Number.isInteger(center) && center >= 1 && center <= 38
-      ? [0, 13, 26].map((offset, i) => {
-          const middle = center - offset;
-          return `Shot ${i + 1}: ${[middle - 1, middle, middle + 1].map(hole).join(', ')}`;
-        }).join(' · ')
-      : 'Enter the first center hole to display the three trial groups.';
-  }
+  const trialGroups = [['A', 0], ['B', 25], ['C', 12]];
+  const wrapHole = index => (index + 38) % 38;
+  const trialMarks = new Map(trialGroups.map(([mark, center]) => [center, mark]));
+  const trialHoles = new Set(trialGroups.flatMap(([, center]) =>
+    [-1, 0, 1].map(offset => wrapHole(center + offset))));
+  const holes = Array.from({length: 38}, (_, index) => {
+    const angle = index * 2 * Math.PI / 38;
+    const x = 160 - 134 * Math.sin(angle);
+    const y = 160 - 134 * Math.cos(angle);
+    const mark = trialMarks.get(index);
+    const trialHole = trialHoles.has(index);
+    return `<g>
+      <circle cx="${x}" cy="${y}" r="8" fill="${trialHole ? '#ffad68' : '#35271f'}"/>
+      <text x="${x}" y="${y + 2.8}" fill="${trialHole ? '#231306' : '#f7e8da'}" font-size="8">${index + 1}</text>
+      ${mark ? `<text x="${160 - 108 * Math.sin(angle)}" y="${164 - 108 * Math.cos(angle)}" fill="#ffad68" font-size="13" font-weight="bold">${mark}</text>` : ''}
+    </g>`;
+  }).join('');
+  $('hub').innerHTML = `<svg viewBox="0 0 320 320" role="img" aria-label="Front looking aft. Hub weight holes numbered counterclockwise from A.">
+    <g text-anchor="middle">${holes}<text x="160" y="160" fill="#f7e8da" font-size="14">WEIGHT HOLES</text>
+    <text x="160" y="180" fill="#ffad68" font-size="12">↺ COUNTERCLOCKWISE</text>
+    <text x="160" y="200" fill="#f7e8da" font-size="11">FRONT LOOKING AFT</text></g>
+  </svg><p class="hint">Diagram hole numbers are relative to A, shown at the top.</p>
+    <ul class="hint">${trialGroups.map(([mark, center]) =>
+      `<li><strong>${mark} weight holes</strong> · ${[-1, 0, 1].map(offset =>
+        wrapHole(center + offset) + 1).join(' · ')}</li>`).join('')}</ul>`;
 
   function draw(m) {
     const scale = 149 / Math.max(m.ri + Math.max(...m.rads), m.r, 0.1);
@@ -50,7 +64,7 @@ if (typeof document !== 'undefined') {
       <path d="M180 180L${px(m.x)} ${py(m.y)}" stroke="#ff9650" stroke-width="3"/>
       <circle cx="${px(m.x)}" cy="${py(m.y)}" r="4" fill="#ff9650"/>
       <circle cx="180" cy="180" r="2.5" fill="#fff"/>
-      </svg><p class="hint legend">${colors.map((c, i) => `<span><b style="color:${c}">●</b>U${i + 1}</span>`).join('')}<span>Dashed ring · U₀</span></p>`;
+      </svg><p class="hint legend">${colors.map((c, i) => `<span><b style="color:${c}">●</b>${"ABC"[i]} · U${i + 1}</span>`).join('')}<span>Dashed ring · U₀</span></p>`;
   }
 
   function clearPlot() {
@@ -58,15 +72,8 @@ if (typeof document !== 'undefined') {
     $('plot').innerHTML = '';
   }
 
-  $('worksheet').addEventListener('input', () => {
-    clearPlot();
-    updatePositions();
-  });
-
-  $('worksheet').addEventListener('reset', () => {
-    clearPlot();
-    $('positions').textContent = 'Enter the first center hole to display the three trial groups.';
-  });
+  $('worksheet').addEventListener('input', clearPlot);
+  $('worksheet').addEventListener('reset', clearPlot);
 
   $('worksheet').addEventListener('submit', event => {
     event.preventDefault();
@@ -80,16 +87,15 @@ if (typeof document !== 'undefined') {
     $('result').innerHTML = `<div class="result"><div class="tag">NUMERICAL PLOT ESTIMATE</div>
       ${resolved ? `<div class="big">${weight.toFixed(1)} g · ${Math.abs(model.angle).toFixed(1)}° ${direction}</div>`
         : '<p>No resolved weight estimate from this plot.</p>'}
-      <p class="hint">R₁ ${model.r.toFixed(2)} mils · Circle fit RMS ${model.residual.toFixed(3)} mils · N1 ${$('n1').valueAsNumber}%</p>
-      <p class="hint">Angle is relative to Shot 1. Use Figure 507 in the controlled manual for equivalent weight selection.</p>
+      <p class="hint">R₁ ${model.r.toFixed(2)} units · Circle fit RMS ${model.residual.toFixed(3)} units · N1 ${$('n1').valueAsNumber}%</p>
+      <p class="hint">Angle is relative to A. Use Figure 507 in the controlled manual for equivalent weight selection.</p>
       </div>`;
     $('plot').innerHTML = draw(model);
   });
 
   $('example').addEventListener('click', () => {
-    const example = {n1: 97.6, weight: 51.9, center: 1, u0: 5, u1: 3.3, u2: 5.6, u3: 6.7};
+    const example = {n1: 97.6, weight: 51.9, u0: 5, u1: 3.3, u2: 5.6, u3: 6.7};
     Object.entries(example).forEach(([id, value]) => { $(id).value = value; });
-    updatePositions();
     $('worksheet').requestSubmit();
   });
 

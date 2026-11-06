@@ -1,5 +1,5 @@
 'use strict';
-const cacheName = 'a300-ge-three-shot-v1';
+const cacheName = 'a300-ge-three-shot-v3';
 const assets = ['./index.html', './plot.js', './manifest.webmanifest', './icon.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.addAll(assets)));

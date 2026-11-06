@@ -7,9 +7,7 @@ body{background:radial-gradient(ellipse at top right,#332117,transparent 520px)}
 <section class="panel"><h2>1 · Trial setup</h2><div class="grid">
 <div><label for="n1">Common N1 (%)</label><input id="n1" type="number" step="any" min="0.01" max="100" required inputmode="decimal"></div>
 <div><label for="weight">Trial weight WT (g)</label><input id="weight" type="number" step="any" min="0.01" required inputmode="decimal"></div>
-<div><label for="center">Shot 1 center hole</label><input id="center" type="number" min="1" max="38" step="1" placeholder="Optional" inputmode="numeric"></div>
-<div><label>Trial plot centers</label><div class="lead">0° / 123° CW / 246° CW</div></div>
-</div><p class="hint" id="positions" aria-live="polite">Enter the first center hole to display the three trial groups.</p></section>
+</div><p class="hint">Use the A, B, and C marks already on the hub. A is the plot reference.</p><div class="plot" id="hub"></div></section>
 <section class="panel"><h2>2 · Vibration readings</h2><p class="lead">Enter all four fan vibration readings at the same N1. Use the same trial weight for all three shots.</p><div class="grid four" id="readings"></div></section>
 <section class="panel"><h2>3 · Three-shot plot</h2><div class="actions"><button type="submit">Calculate plot</button><button class="secondary" type="button" id="example">Load Fig. 511</button><button class="secondary" type="reset">Clear</button></div>
 <div id="result" aria-live="polite"><p class="hint">Enter the readings to draw the baseline and three trial arcs.</p></div><div class="plot" id="plot"></div></section></form>
