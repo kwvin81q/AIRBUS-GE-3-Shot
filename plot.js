@@ -25,14 +25,16 @@ if (typeof document !== 'undefined') {
   const trialMarks = new Map(trialGroups.map(([mark, center]) => [center, mark]));
   const trialHoles = new Set(trialGroups.flatMap(([, center]) =>
     [-1, 0, 1].map(offset => wrapHole(center + offset))));
+  function drawHub(solutionHole) {
   const holes = Array.from({length: 38}, (_, index) => {
     const angle = index * 2 * Math.PI / 38;
     const x = 160 - 134 * Math.sin(angle);
     const y = 160 - 134 * Math.cos(angle);
     const mark = trialMarks.get(index);
     const trialHole = trialHoles.has(index);
+    const selected = solutionHole === index + 1;
     return `<g>
-      <circle cx="${x}" cy="${y}" r="8" fill="${trialHole ? '#ffad68' : '#35271f'}"/>
+      <circle cx="${x}" cy="${y}" r="8" stroke="${selected ? '#8ff3d8' : 'none'}" stroke-width="2.5" fill="${trialHole ? '#ffad68' : '#35271f'}"/>
       <text x="${x}" y="${y + 2.8}" fill="${trialHole ? '#231306' : '#f7e8da'}" font-size="8">${index + 1}</text>
       ${mark ? `<text x="${160 - 108 * Math.sin(angle)}" y="${164 - 108 * Math.cos(angle)}" fill="#ffad68" font-size="13" font-weight="bold">${mark}</text>` : ''}
     </g>`;
@@ -41,10 +43,13 @@ if (typeof document !== 'undefined') {
     <g text-anchor="middle">${holes}<text x="160" y="160" fill="#f7e8da" font-size="14">WEIGHT HOLES</text>
     <text x="160" y="180" fill="#ffad68" font-size="12">↺ COUNTERCLOCKWISE</text>
     <text x="160" y="200" fill="#f7e8da" font-size="11">FRONT LOOKING AFT</text></g>
-  </svg><p class="hint">Diagram hole numbers are relative to A, shown at the top.</p>
+  </svg><p class="hint">Hole 1 is 0° at A. Numbers increase counterclockwise looking aft.</p>
     <ul class="hint">${trialGroups.map(([mark, center]) =>
       `<li><strong>${mark} weight holes</strong> · ${[-1, 0, 1].map(offset =>
         wrapHole(center + offset) + 1).join(' · ')}</li>`).join('')}</ul>`;
+
+  }
+  drawHub();
 
   function draw(m) {
     const scale = 149 / Math.max(m.ri + Math.max(...m.rads), m.r, 0.1);
@@ -70,6 +75,7 @@ if (typeof document !== 'undefined') {
   function clearPlot() {
     $('result').innerHTML = prompt;
     $('plot').innerHTML = '';
+    drawHub();
   }
 
   $('worksheet').addEventListener('input', clearPlot);
@@ -84,8 +90,12 @@ if (typeof document !== 'undefined') {
     // Suppress an unstable ratio when the fitted vector cannot be distinguished
     // from the circle disagreement or from a zero-length vector.
     const resolved = Number.isFinite(weight) && model.r > Math.max(1e-6 * model.ri, model.residual);
+    // The plot uses clockwise-positive angles. Spinner holes increase CCW.
+    const holeOffset = ((-model.angle * 38 / 360) % 38 + 38) % 38;
+    const spinnerHole = Math.round(holeOffset) % 38 + 1;
+    drawHub(resolved ? spinnerHole : undefined);
     $('result').innerHTML = `<div class="result"><div class="tag">NUMERICAL PLOT ESTIMATE</div>
-      ${resolved ? `<div class="big">${weight.toFixed(1)} g · ${Math.abs(model.angle).toFixed(1)}° ${direction}</div>`
+      ${resolved ? `<div class="big">${weight.toFixed(1)} g · ${Math.abs(model.angle).toFixed(1)}° ${direction}</div><p><strong>Nearest spinner hole ${spinnerHole}</strong></p>`
         : '<p>No resolved weight estimate from this plot.</p>'}
       <p class="hint">R₁ ${model.r.toFixed(2)} units · Circle fit RMS ${model.residual.toFixed(3)} units · N1 ${$('n1').valueAsNumber}%</p>
       <p class="hint">Angle is relative to A. Use Figure 507 in the controlled manual for equivalent weight selection.</p>
