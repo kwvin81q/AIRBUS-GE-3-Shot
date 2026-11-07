@@ -93,12 +93,17 @@ if (typeof document !== 'undefined') {
     // The plot uses clockwise-positive angles. Spinner holes increase CCW.
     const holeOffset = ((-model.angle * 38 / 360) % 38 + 38) % 38;
     const spinnerHole = Math.round(holeOffset) % 38 + 1;
-    drawHub(resolved ? spinnerHole : undefined);
+    // A fitted point can fall on the other side of a hole boundary from the worksheet.
+    const commonIntersection = model.residual <= 1e-6 * model.ri;
+    const showHole = resolved && commonIntersection;
+    drawHub(showHole ? spinnerHole : undefined);
     $('result').innerHTML = `<div class="result"><div class="tag">NUMERICAL PLOT ESTIMATE</div>
-      ${resolved ? `<div class="big">${weight.toFixed(1)} g · ${Math.abs(model.angle).toFixed(1)}° ${direction}</div><p><strong>Nearest spinner hole ${spinnerHole}</strong></p>`
+      ${resolved ? `<div class="big">${weight.toFixed(1)} g · ${Math.abs(model.angle).toFixed(1)}° ${direction}</div>${showHole
+          ? `<p><strong>Nearest spinner hole ${spinnerHole}</strong></p>`
+          : '<p><strong>Spinner hole withheld.</strong> Use the AMM worksheet to determine the location from these arcs.</p>'}`
         : '<p>No resolved weight estimate from this plot.</p>'}
       <p class="hint">R₁ ${model.r.toFixed(2)} units · Circle fit RMS ${model.residual.toFixed(3)} units · N1 ${$('n1').valueAsNumber}%</p>
-      <p class="hint">Angle is relative to A. Use Figure 507 in the controlled manual for equivalent weight selection.</p>
+      <p class="hint">The numerical fit approximates the AMM arc construction. Angle is relative to A. Use Figure 507 in the controlled manual for equivalent weight selection.</p>
       </div>`;
     $('plot').innerHTML = draw(model);
   });
